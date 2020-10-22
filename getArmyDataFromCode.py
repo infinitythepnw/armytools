@@ -2,36 +2,86 @@ import json
 import requests
 
 
+# cflorka
+# Oct 21, 2020
+# NOTE: Army builder has bug so "Generate Army Code" string isn't
+# working properly, so only string in saved lists under name in
+# Server-saved games is currently working.
 def getJSONfromArmyCode(armyCodeStr):
+    '''
+    Gets JSON from army builder based on army code passed as argument.
+
+    Takes the CB api format, and reduces the data down to what one would
+    find in the army builder.
+
+    Parameters
+    ----------
+    armyCodeStr : string
+        String obtained from army builder by clicking "Generate Army Code"
+        button, or copying the string found under army when selecting a saved
+        army which is saved on the server.
+
+    Returns
+    -------
+    armyJSON : Dict/JSON Object
+        JSON object returned when calling api with armyCodeStr
+    '''
     url = "https://api.corvusbelli.com/army/lists/{}".format(armyCodeStr)
     getResponse = requests.get(url)
     armyJSON = getResponse.json()
     return armyJSON
 
 
-def addTrooperToGroup(trooperObj, unitList):
-    unitDict = {}
-    swc = float(trooperObj["swc"])
-    pts = trooperObj["points"]
-    equipment = trooperObj["equipName"]
-    unitDict["name"] = trooperObj["name"]
-    if trooperObj["skillsName"] is not None:
-        unitDict["name"] += " ({})".format(trooperObj["skillsName"])
-    unitDict["weaponsAndEquipment"] = trooperObj["weaponsName"]
+def buildCustomTrooperObj(origTrooperObj):
+    '''
+    Returns trooper data from CB's format to more condensed format.
+
+    Takes the JSON object in CB api format,
+    and reduces the data down to what one would find in the army builder.
+
+    Parameters
+    ----------
+    origTrooperObj : Dict/JSON Object
+        CB's JSON object for a trooper, found as entry in "options" list.
+
+    Returns
+    -------
+    newTrooperObj : Dict/JSON Object
+        New JSON object with only relevant data found in army builder list.
+    '''
+    newTrooperObj = {}
+    swc = float(origTrooperObj["swc"])
+    pts = origTrooperObj["points"]
+    equipment = origTrooperObj["equipName"]
+    newTrooperObj["name"] = origTrooperObj["name"]
+    if origTrooperObj["skillsName"] is not None:
+        newTrooperObj["name"] += " ({})".format(origTrooperObj["skillsName"])
+    newTrooperObj["weaponsAndEquipment"] = origTrooperObj["weaponsName"]
     if equipment is not None:
-        unitDict["weaponsAndEquipment"] += equipment
-    unitDict["ccWeapons"] = trooperObj["weaponsCCName"]
-    unitDict["swc"] = swc
-    unitDict["points"] = pts
-
-    unitList.append(unitDict)
-    return (swc, pts)
+        newTrooperObj["weaponsAndEquipment"] += equipment
+    newTrooperObj["ccWeapons"] = origTrooperObj["weaponsCCName"]
+    newTrooperObj["swc"] = swc
+    newTrooperObj["points"] = pts
+    return newTrooperObj
 
 
-def getGroupOrders(targetGroupNumber, armyListJSON):
+def getGroupOrders(targetGroupId, armyListJSON):
+    '''
+    Returns group order data from CB's format to more flattened format.
+
+    Parameters
+    ----------
+    targetGroupId : string
+        The ID used to pull correct group's order data from CB's JSON
+
+    Returns
+    -------
+    orders : Dict/JSON Object
+        New JSON object with flatter structure.
+    '''
     orders = {}
     for group in armyListJSON["verify"]["groups"]:
-        if group["id"] == targetGroupNumber:
+        if group["id"] == targetGroupId:
             for orderTypeData in group["orders"]:
                 orders[orderTypeData["type"]] = orderTypeData["total"]
             break
@@ -39,6 +89,24 @@ def getGroupOrders(targetGroupNumber, armyListJSON):
 
 
 def getArmyDataFromCode(armyCodeStr):
+    '''
+    Takes an Army Code String and returns JSON data of army list.
+
+    JSON returned is pared down and flattened to make easier for
+    formatting.
+
+    Parameters
+    ----------
+    armyCodeStr : string
+        String obtained from army builder by clicking "Generate Army Code"
+        button, or copying the string found under army when selecting a saved
+        army which is saved on the server.
+
+    Returns
+    -------
+    armyJSON : Dict/JSON Object
+        JSON object with army list data.
+    '''
     armyGroupList = []
 
     armyListFullJSON = getJSONfromArmyCode(armyCodeStr)
@@ -50,13 +118,15 @@ def getArmyDataFromCode(armyCodeStr):
         for trooper in group["options"]:
             if len(trooper["includes"]) > 0:
                 for subtrooper in trooper["includes"]:
-                    (swc, pts) = addTrooperToGroup(subtrooper, groupUnitList)
-                    groupSwcTotal += swc
-                    groupPtsTotal += pts
+                    trooperData = buildCustomTrooperObj(subtrooper)
+                    groupSwcTotal += trooperData["swc"]
+                    groupPtsTotal += trooperData["pts"]
+                    groupUnitList.append(trooperData)
             else:
-                (swc, pts) = addTrooperToGroup(trooper, groupUnitList)
-                groupSwcTotal += swc
-                groupPtsTotal += pts
+                trooperData = buildCustomTrooperObj(trooper)
+                groupSwcTotal += trooperData["swc"]
+                groupPtsTotal += trooperData["pts"]
+                groupUnitList.append(trooperData)
         # Build group Object
         groupObject = {}
         groupObject["name"] = "Group {}".format(groupNum)
@@ -81,4 +151,4 @@ def getArmyDataFromCode(armyCodeStr):
 # with open("testOutput.json", "w") as write_file:
     # outputString1 = getArmyDataFromCode("g6wpsm4Seh")
     # outputString2 = getArmyDataFromCode("Uj8CvHOBuh")
-    # write_file.write(outputString2)
+    # write_file.write(outputString1)
