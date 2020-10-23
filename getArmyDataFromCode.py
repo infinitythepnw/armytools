@@ -50,7 +50,11 @@ def buildCustomTrooperObj(origTrooperObj):
         New JSON object with only relevant data found in army builder list.
     '''
     newTrooperObj = {}
-    swc = float(origTrooperObj["swc"])
+    swc = origTrooperObj["swc"]
+    if swc[0] in ["+", "-"]:
+        swcInt = 0.0
+    else:
+        swcInt = float(swc)
     pts = origTrooperObj["points"]
     equipment = origTrooperObj["equipName"]
     newTrooperObj["name"] = origTrooperObj["name"]
@@ -61,6 +65,7 @@ def buildCustomTrooperObj(origTrooperObj):
         newTrooperObj["weaponsAndEquipment"] += equipment
     newTrooperObj["ccWeapons"] = origTrooperObj["weaponsCCName"]
     newTrooperObj["swc"] = swc
+    newTrooperObj["swcInt"] = swcInt
     newTrooperObj["points"] = pts
     return newTrooperObj
 
@@ -117,14 +122,19 @@ def getArmyDataFromCode(armyCodeStr):
         groupPtsTotal = 0
         for trooper in group["options"]:
             if len(trooper["includes"]) > 0:
+                if "weaponsName" in trooper:
+                    trooperData = buildCustomTrooperObj(trooper)
+                    groupSwcTotal += trooperData["swcInt"]
+                    groupPtsTotal += trooperData["points"]
+                    groupUnitList.append(trooperData)
                 for subtrooper in trooper["includes"]:
                     trooperData = buildCustomTrooperObj(subtrooper)
-                    groupSwcTotal += trooperData["swc"]
+                    groupSwcTotal += trooperData["swcInt"]
                     groupPtsTotal += trooperData["points"]
                     groupUnitList.append(trooperData)
             else:
                 trooperData = buildCustomTrooperObj(trooper)
-                groupSwcTotal += trooperData["swc"]
+                groupSwcTotal += trooperData["swcInt"]
                 groupPtsTotal += trooperData["points"]
                 groupUnitList.append(trooperData)
         # Build group Object
@@ -148,7 +158,9 @@ def getArmyDataFromCode(armyCodeStr):
     return armyJSON
 
 # Test code below
-# with open("testOutput.json", "w") as write_file:
-    # outputString1 = getArmyDataFromCode("g6wpsm4Seh")
-    # outputString2 = getArmyDataFromCode("Uj8CvHOBuh")
-    # write_file.write(outputString1)
+with open("testOutput.json", "w") as write_file:
+    # outputString = getArmyDataFromCode("g6wpsm4Seh")
+    # outputString = getArmyDataFromCode("Uj8CvHOBuh")
+    # outputString = getArmyDataFromCode("U7ArcMVHE1")
+    outputString = getArmyDataFromCode("6uF5Frd26B")
+    write_file.write(outputString)
