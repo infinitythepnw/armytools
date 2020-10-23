@@ -120,12 +120,12 @@ def getArmyDataFromCode(armyCodeStr):
                 for subtrooper in trooper["includes"]:
                     trooperData = buildCustomTrooperObj(subtrooper)
                     groupSwcTotal += trooperData["swc"]
-                    groupPtsTotal += trooperData["pts"]
+                    groupPtsTotal += trooperData["points"]
                     groupUnitList.append(trooperData)
             else:
                 trooperData = buildCustomTrooperObj(trooper)
                 groupSwcTotal += trooperData["swc"]
-                groupPtsTotal += trooperData["pts"]
+                groupPtsTotal += trooperData["points"]
                 groupUnitList.append(trooperData)
         # Build group Object
         groupObject = {}
